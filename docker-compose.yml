@@ -1,0 +1,21 @@
+services:
+  notion-todo-tasks-mcp:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - NOTION_API_KEY=${NOTION_API_KEY}
+      - NOTION_DATABASE_ID=${NOTION_DATABASE_ID}
+    restart: unless-stopped 
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.notion_todo_tasks_mcp.rule=Host(`mcp.mingles.ai`)"
+      - "traefik.http.routers.notion_todo_tasks_mcp.entrypoints=websecure"
+      - "traefik.http.routers.notion_todo_tasks_mcp.tls.certresolver=letsencrypt"
+      - "traefik.http.services.notion_todo_tasks_mcp.loadbalancer.server.port=8000"
+    networks:
+      - traefiknet
+
+networks:
+  traefiknet:
+    external: true

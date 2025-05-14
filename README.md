@@ -15,7 +15,7 @@ This is a personal project designed for a very specific use case: my simple Noti
 
 [Example Notion Database](https://danhilse.notion.site/14e5549555a08078afb5ed5d374bb656?v=14e5549555a081f9b5a4000cdf952cb9&pvs=4)
 
-While you can use this as a starting point for your own Notion integration, you'll likely need to modify the code to match your specific database structure and requirements.
+While you can use this as a starting point for your own Notion integration, you'll likely need to modify the code to match your specific database structure.
 
 ## Features
 
@@ -23,6 +23,7 @@ While you can use this as a starting point for your own Notion integration, you'
 - View all todos
 - View today's tasks
 - Check off a task as complete
+- Multiple transport options: stdio, SSE, and Streamable HTTP
 
 ## Prerequisites
 
@@ -33,64 +34,82 @@ While you can use this as a starting point for your own Notion integration, you'
 
 ## Setup
 
-1. Clone the repository:
-```bash
-git clone https://github.com/yourusername/notion-mcp.git
-cd notion-mcp
-```
-
-2. Set up Python environment:
-```bash
-python -m venv .venv
-source .venv/bin/activate  # On Windows use: .venv\Scripts\activate
-uv pip install -e .
-```
-
-3. Create a Notion integration:
-   - Go to https://www.notion.so/my-integrations
-   - Create new integration
-   - Copy the API key
-
-4. Share your database with the integration:
-   - Open your todo database in Notion
-   - Click "..." menu → "Add connections"
-   - Select your integration
-
-5. Create a `.env` file:
-```env
-NOTION_API_KEY=your-api-key-here
-NOTION_DATABASE_ID=your-database-id-here
-```
-
-6. Configure Claude Desktop:
-```json
-{
-  "mcpServers": {
-    "notion-todo": {
-      "command": "/path/to/your/.venv/bin/python",
-      "args": ["-m", "notion_mcp"],
-      "cwd": "/path/to/notion-mcp"
-    }
-  }
-}
-```
+1. Clone this repository
+2. Create a `.env` file in the root directory with the following variables:
+   ```
+   NOTION_API_KEY=your_notion_api_key_here
+   NOTION_DATABASE_ID=your_database_id_here
+   ```
+3. Install dependencies:
+   ```
+   pip install -e .
+   ```
 
 ## Running the Server
 
-The server can be run in two ways:
+The server now uses the Streamable HTTP transport by default:
 
-1. Directly from the command line:
 ```bash
-# From the project directory with virtual environment activated
 python -m notion_mcp
 ```
 
-2. Automatically through Claude Desktop (recommended):
-- The server will start when Claude launches if configured correctly in `claude_desktop_config.json`
-- No manual server management needed
-- Server stops when Claude is closed
+You can specify host and port:
 
-Note: When running directly, the server won't show any output unless there's an error - this is normal as it's waiting for MCP commands.
+```bash
+python -m notion_mcp --host 127.0.0.1 --port 8000
+```
+
+### Running with Docker
+
+You can also run the server using Docker:
+
+1. Build and start the container:
+
+```bash
+docker build -t notion-mcp .
+docker run -p 8000:8000 -e NOTION_API_KEY=your_key -e NOTION_DATABASE_ID=your_db_id notion-mcp
+```
+
+2. Or using Docker Compose:
+
+```bash
+# Create a .env file with your NOTION_API_KEY and NOTION_DATABASE_ID
+docker-compose up -d
+```
+
+## Available Tools
+
+The MCP server provides the following tools:
+
+- `list_tasks`: List all tasks in the Notion database
+- `add_task`: Add a new task to the database
+- `complete_task`: Mark a task as completed
+- `uncomplete_task`: Mark a task as not completed
+- `set_task_time`: Set when a task should be done (today or later)
+
+## Using with Claude
+
+To use this MCP server with Claude, you'll need to configure a client that can connect to the Streamable HTTP transport. For example, you can use the MCP Python SDK to create a client:
+
+```python
+from mcp.client import Client
+from mcp.client.transport import StreamableHttpTransport
+
+# Create a client with the Streamable HTTP transport
+transport = StreamableHttpTransport(url="http://127.0.0.1:8000")
+client = Client(transport=transport)
+
+# Connect to the server
+await client.connect()
+
+# List the available tools
+tools = await client.list_tools()
+print(tools)
+
+# Call a tool
+result = await client.call_tool("list_tasks")
+print(result)
+```
 
 ## Usage
 
